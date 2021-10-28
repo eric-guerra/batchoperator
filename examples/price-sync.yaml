@@ -1,0 +1,16 @@
+apiVersion: batch.ericguerra.dev/v1
+kind: ShardedBatch
+metadata:
+  name: nightly-price-sync
+  namespace: batch
+spec:
+  image: registry.example.com/price-sync:2.3.1
+  command: [python, -m, price_sync, --date, "2022-03-01"]
+  env:
+    PRICE_API: https://pricing.internal
+  shards: [S001, S002, S003, S004, S005, S006, S007, S008]
+  parallelism: 3
+  maxRetries: 2
+  backoffSeconds: 60
+  failurePolicy: Continue
+  activeDeadlineSeconds: 1800
