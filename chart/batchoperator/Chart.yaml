@@ -1,0 +1,6 @@
+apiVersion: v2
+name: batchoperator
+description: Kubernetes operator that fans batch work out over shards as Jobs
+type: application
+version: 0.3.0
+appVersion: "0.3.0"
