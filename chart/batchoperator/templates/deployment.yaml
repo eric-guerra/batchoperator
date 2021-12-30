@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "batchoperator.fullname" . }}
+  labels: {{- include "batchoperator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: Recreate # kopf peering elects one active replica; avoid two during rollout
+  selector:
+    matchLabels: {{- include "batchoperator.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "batchoperator.selector" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "batchoperator.fullname" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: operator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: IfNotPresent
+          args:
+            - --standalone=false
+            - --liveness=http://0.0.0.0:8080/healthz
+            {{- if .Values.watchNamespaces }}
+            {{- range .Values.watchNamespaces }}
+            - --namespace={{ . }}
+            {{- end }}
+            {{- else }}
+            - --all-namespaces
+            {{- end }}
+          ports:
+            - { name: health, containerPort: 8080 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: health }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
